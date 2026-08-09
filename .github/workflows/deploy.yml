@@ -1,38 +1,53 @@
-  name: Setup Node
-    uses: actions/setup-node@v4
-    with:
-      node-version: '18'
+name: CI / Deploy to Firebase Hosting
 
-  name: Authenticate to GCP using service account
-    uses: google-github-actions/auth@v1
-    with:
-      credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+on:
+  push:
+    branches:
+      - feat/firebase-backend
+  workflow_dispatch:
 
-  name: Prepare firebase client config
-    env:
-      FIREBASE_WEB_CONFIG: ${{ secrets.FIREBASE_WEB_CONFIG }}
-      ADMIN_EMAIL: "krishna.personalinbox@gmail.com"
-    run: |
-      echo "Creating firebase-config.js from FIREBASE_WEB_CONFIG..."
-      # Save secret exactly to a file (preserves newlines/quotes)
-      printf "%s" "$FIREBASE_WEB_CONFIG" > /tmp/firebase_web_config.json
-      # Validate the JSON and fail with a clear message if invalid
-      node -e "const fs=require('fs'); try { JSON.parse(fs.readFileSync('/tmp/firebase_web_config.json','utf8')); console.log('FIREBASE_WEB_CONFIG JSON is valid'); } catch(e) { console.error('Invalid FIREBASE_WEB_CONFIG JSON:', e.message); process.exit(1); }"
-      # Build firebase-config.js safely from validated file
-      echo "window.FIREBASE_CONFIG = " > firebase-config.js
-      cat /tmp/firebase_web_config.json >> firebase-config.js
-      printf "\nwindow.BLOOM_ADMIN_EMAIL = '%s';\n" "$ADMIN_EMAIL" >> firebase-config.js
-      # Extract PROJECT_ID and export to environment
-      node -e "const fs=require('fs'); const s=fs.readFileSync('/tmp/firebase_web_config.json','utf8'); console.log(JSON.parse(s).projectId);" > project_id.txt
-      echo "PROJECT_ID=$(cat project_id.txt)" >> $GITHUB_ENV
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  name: Install Firebase CLI
-    run: |
-      npm install -g firebase-tools
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
 
-  name: Deploy to Firebase Hosting
-    env:
-      PROJECT_ID: ${{ env.PROJECT_ID }}
-    run: |
-      echo "Deploying to Firebase project: $PROJECT_ID"
-      firebase deploy --only hosting --project $PROJECT_ID --non-interactive
+      - name: Authenticate to GCP using service account
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Prepare firebase client config
+        env:
+          FIREBASE_WEB_CONFIG: ${{ secrets.FIREBASE_WEB_CONFIG }}
+          ADMIN_EMAIL: "krishna.personalinbox@gmail.com"
+        run: |
+          echo "Creating firebase-config.js from FIREBASE_WEB_CONFIG..."
+          # Save secret exactly to a file (preserves newlines/quotes)
+          printf "%s" "$FIREBASE_WEB_CONFIG" > /tmp/firebase_web_config.json
+          # Validate the JSON and fail with a clear message if invalid
+          node -e "const fs=require('fs'); try { JSON.parse(fs.readFileSync('/tmp/firebase_web_config.json','utf8')); console.log('FIREBASE_WEB_CONFIG JSON is valid'); } catch(e) { console.error('Invalid FIREBASE_WEB_CONFIG JSON:', e.message); process.exit(1); }"
+          # Build firebase-config.js safely from validated file
+          echo "window.FIREBASE_CONFIG = " > firebase-config.js
+          cat /tmp/firebase_web_config.json >> firebase-config.js
+          printf "\nwindow.BLOOM_ADMIN_EMAIL = '%s';\n" "$ADMIN_EMAIL" >> firebase-config.js
+          # Extract PROJECT_ID and export to environment
+          node -e "const fs=require('fs'); const s=fs.readFileSync('/tmp/firebase_web_config.json','utf8'); console.log(JSON.parse(s).projectId);" > project_id.txt
+          echo "PROJECT_ID=$(cat project_id.txt)" >> $GITHUB_ENV
+
+      - name: Install Firebase CLI
+        run: |
+          npm install -g firebase-tools
+
+      - name: Deploy to Firebase Hosting
+        env:
+          PROJECT_ID: ${{ env.PROJECT_ID }}
+        run: |
+          echo "Deploying to Firebase project: $PROJECT_ID"
+          firebase deploy --only hosting --project $PROJECT_ID --non-interactive
