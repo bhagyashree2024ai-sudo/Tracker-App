@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bloom - Pregnancy Journey & Task Tracker</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js for progress visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- FontAwesome for beautiful icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bloom: {
+              50: '#fff1f2',
+              100: '#ffe4e6',
+              200: '#fecdd3',
+              300: '#fda4af',
+              400: '#fb7185',
+              500: '#f43f5e',
+              600: '#e11d48',
+              700: '#be123c',
+              800: '#9f1239',
+              900: '#881337',
+            },
+            lavender: {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #fafaf9;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #fca5a5;
+      border-radius: 9999px;
+    }
+    .task-card {
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .task-card:hover {
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col">
+  <!-- Top Navigation Header -->
+  <header class="bg-white border-b border-rose-100 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center text-white shadow-md shadow-rose-200">
+          <i class="fa-solid fa-baby text-xl"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg text-slate-800 leading-tight">Bloom Tracker</h1>
+          <p class="text-xs text-rose-500 font-medium flex items-center gap-1">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Cloud Sync Active
+          </p>
+        </div>
+      </div>
+
+      <!-- Role Switcher & Config -->
+      <div class="flex items-center gap-2">
+        <div class="bg-slate-100 p-1 rounded-xl flex items-center gap-1 text-xs font-semibold">
+          <button id="btnRoleWife" onclick="setRole('wife')" class="px-3 py-1.5 rounded-lg transition-all bg-white text-rose-600 shadow-sm">
+            🌸 Wife
+          </button>
+          <button id="btnRoleAdmin" onclick="setRole('admin')" class="px-3 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900">
+            🛠️ Partner Mode
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-4xl mx-auto px-4 py-6 flex-1 w-full space-y-6">
+
+    <!-- Gestational Progress Hero Banner -->
+    <section class="bg-gradient-to-r from-rose-500 via-pink-500 to-purple-500 rounded-3xl p-6 text-white shadow-xl shadow-rose-100 relative overflow-hidden">
+      <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+      
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+        <div>
+          <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-medium mb-3">
+            <i class="fa-solid fa-calendar-heart text-pink-200"></i>
+            <span id="trimesterLabel">Trimester 2 • Week --</span>
+          </div>
+          <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight" id="gestationalAgeText">
+            Calculating Gestational Age...
+          </h2>
+          <p class="text-rose-100 text-sm mt-1 flex items-center gap-2">
+            <span>Baby is about the size of a <strong id="babySizeText" class="text-white underline decoration-rose-300">Mango 🥭</strong></span>
+          </p>
+        </div>
+
+        <div class="bg-white/15 backdrop-blur-md rounded-2xl p-4 min-w-[200px] border border-white/20 text-center">
+          <p class="text-xs text-rose-100 font-medium uppercase tracking-wider">Estimated Due Date</p>
+          <p class="text-xl font-bold mt-1 text-white" id="dueDateText">Jan 15, 2027</p>
+          <p class="text-xs text-rose-200 mt-1" id="daysRemainingText">-- Days to go</p>
+        </div>
+      </div>
+
+      <!-- Timeline Progress Bar -->
+      <div class="mt-6 pt-4 border-t border-white/20">
+        <div class="flex justify-between text-xs font-semibold text-rose-100 mb-1">
+          <span>LMP: <span id="lmpDisplay">Apr 10, 2026</span></span>
+          <span id="progressPercentage">0% Completed</span>
+          <span>40 Weeks</span>
+        </div>
+        <div class="w-full bg-black/20 rounded-full h-3 p-0.5 overflow-hidden">
+          <div id="gestationalProgressBar" class="bg-white h-full rounded-full transition-all duration-1000 shadow-sm" style="width: 0%"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <div class="flex border-b border-slate-200 gap-6 text-sm font-semibold text-slate-500">
+      <button onclick="switchTab('daily')" id="tabDailyBtn" class="py-2 border-b-2 border-rose-500 text-rose-600 flex items-center gap-2">
+        <i class="fa-solid fa-list-check"></i> Daily Tasks
+      </button>
+      <button onclick="switchTab('analytics')" id="tabAnalyticsBtn" class="py-2 border-b-2 border-transparent hover:text-slate-800 flex items-center gap-2">
+        <i class="fa-solid fa-chart-line"></i> Analytics & Streaks
+      </button>
+      <button onclick="switchTab('settings')" id="tabSettingsBtn" class="py-2 border-b-2 border-transparent hover:text-slate-800 flex items-center gap-2">
+        <i class="fa-solid fa-gear"></i> Config & Sync
+      </button>
+    </div>
+
+    <!-- TAB 1: DAILY TASKS -->
+    <div id="tabDaily" class="space-y-6">
+      
+      <!-- Date Bar & Filter Header -->
+      <div class="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <button onclick="changeDate(-1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition">
+            <i class="fa-solid fa-chevron-left"></i>
+          </button>
+          <input type="date" id="selectedDatePicker" onchange="onDateChanged()" class="border border-slate-200 rounded-xl px-3 py-1.5 text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-400">
+          <button onclick="changeDate(1)" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition">
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
+          <button onclick="goToToday()" class="px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl text-xs font-bold transition">
+            Today
+          </button>
+        </div>
+
+        <!-- Task Progress Badge -->
+        <div class="flex items-center gap-3">
+          <div class="text-right">
+            <p class="text-xs text-slate-500 font-medium">Daily Completion</p>
+            <p class="text-sm font-bold text-slate-800" id="dailyProgressText">0 / 11 Tasks Done</p>
+          </div>
+          <div class="w-12 h-12 rounded-full bg-rose-50 border-2 border-rose-200 flex items-center justify-center text-rose-600 font-extrabold text-xs" id="dailyBadgePct">
+            0%
+          </div>
+        </div>
+      </div>
+
+      <!-- Add New Task Bar (Visible in Admin/Partner Mode or Quick Add) -->
+      <div id="adminControlsBlock" class="bg-slate-900 text-white p-4 rounded-2xl shadow-lg space-y-3 hidden">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-2">
+            <i class="fa-solid fa-user-gear"></i> Partner Management Mode
+          </h3>
+          <span class="text-xs text-slate-400">Add tasks to wife's live checklist</span>
+        </div>
+        <form onsubmit="addNewTask(event)" class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+          <input type="text" id="newTaskTitle" placeholder="e.g. Drink Coconut Water" required class="sm:col-span-5 bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-400">
+          <select id="newTaskTimeBlock" class="sm:col-span-3 bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm focus:outline-none">
+            <option value="morning">🌅 Morning</option>
+            <option value="afternoon">☀️ Afternoon</option>
+            <option value="evening">🌙 Evening</option>
+          </select>
+          <input type="time" id="newTaskTime" class="sm:col-span-2 bg-slate-800 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm focus:outline-none">
+          <button type="submit" class="sm:col-span-2 bg-rose-500 hover:bg-rose-600 font-bold text-white rounded-xl px-4 py-2 text-sm transition shadow-md shadow-rose-900">
+            + Add
+          </button>
+        </form>
+      </div>
+
+      <!-- Morning Routine Block -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between border-b border-amber-100 pb-2">
+          <h3 class="font-bold text-slate-800 flex items-center gap-2 text-md">
+            <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-sm">🌅</span>
+            Morning Routine
+          </h3>
+          <span class="text-xs text-slate-400 font-semibold" id="morningCount">0 Done</span>
+        </div>
+        <div id="morningTasksList" class="space-y-2">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Afternoon Routine Block -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between border-b border-sky-100 pb-2">
+          <h3 class="font-bold text-slate-800 flex items-center gap-2 text-md">
+            <span class="w-7 h-7 rounded-lg bg-sky-100 text-sky-600 flex items-center justify-center text-sm">☀️</span>
+            Afternoon Activities
+          </h3>
+          <span class="text-xs text-slate-400 font-semibold" id="afternoonCount">0 Done</span>
+        </div>
+        <div id="afternoonTasksList" class="space-y-2">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Evening Routine Block -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between border-b border-indigo-100 pb-2">
+          <h3 class="font-bold text-slate-800 flex items-center gap-2 text-md">
+            <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm">🌙</span>
+            Evening & Night Routine
+          </h3>
+          <span class="text-xs text-slate-400 font-semibold" id="eveningCount">0 Done</span>
+        </div>
+        <div id="eveningTasksList" class="space-y-2">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TAB 2: ANALYTICS & STREAKS -->
+    <div id="tabAnalytics" class="space-y-6 hidden">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+          <h3 class="font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-chart-simple text-rose-500"></i> Weekly Progress Trend
+          </h3>
+          <div class="h-64">
+            <canvas id="weeklyChart"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+          <h3 class="font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-pie-chart text-purple-500"></i> Category Completion Breakdown
+          </h3>
+          <div class="h-64 flex items-center justify-center">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: SETTINGS & CLOUD SYNC -->
+    <div id="tabSettings" class="space-y-6 hidden">
+      <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+        <div>
+          <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-rose-500"></i> Pregnancy Configuration
+          </h3>
+          <p class="text-xs text-slate-500 mt-1">Adjust dates to automatically calculate gestational age and trimesters.</p>
+        </div>
+
+        <div class="space-y-4 max-w-md">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Last Menstrual Period (LMP)</label>
+            <input type="date" id="configLmpDate" value="2026-04-10" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-400">
+          </div>
+
+          <button onclick="saveConfiguration()" class="px-5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-bold text-sm rounded-xl transition shadow-md shadow-rose-200">
+            Save LMP Settings
+          </button>
+        </div>
+
+        <hr class="border-slate-100">
+
+        <div>
+          <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+            <i class="fa-solid fa-arrows-rotate text-emerald-500"></i> Restore Default Routines
+          </h3>
+          <p class="text-xs text-slate-500 mt-1">If tasks get accidentally deleted, reset to your original 11 pregnancy routines anytime.</p>
+          <button onclick="resetDefaultTasks()" class="mt-3 px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs rounded-xl transition">
+            🔄 Reset All 11 Daily Tasks
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    /* Data Storage Keys */
+    const STORAGE_KEY_TASKS = 'bloom_tasks_master_v10';
+    const STORAGE_KEY_CONFIG = 'bloom_config_master_v10';
+    const STORAGE_KEY_COMPLETIONS = 'bloom_completions_master_v10';
+
+    // Current Role ('wife' or 'admin')
+    let currentRole = 'wife';
+    let selectedDate = new Date().toISOString().split('T')[0];
+
+    // Default 11 daily routines
+    const DEFAULT_TASKS = [
+      { id: 't1', title: 'Pranayama (20 mins)', block: 'morning', time: '06:30', icon: '🧘‍♀️', category: 'Health' },
+      { id: 't2', title: 'Exercise (20 mins)', block: 'morning', time: '07:00', icon: '🏋️‍♀️', category: 'Health' },
+      { id: 't3', title: 'Morning Supplement', block: 'morning', time: '08:30', icon: '💊', category: 'Supplements' },
+      { id: 't4', title: 'Garbhasamvaad', block: 'morning', time: '', icon: '💖', category: 'Bonding' },
+      { id: 't5', title: 'Left Brain Activity', block: 'afternoon', time: '', icon: '🧩', category: 'Mind' },
+      { id: 't6', title: 'Right Brain Activity', block: 'afternoon', time: '', icon: '🎨', category: 'Mind' },
+      { id: 't7', title: 'Reading (at least 20 mins)', block: 'afternoon', time: '', icon: '📖', category: 'Mind' },
+      { id: 't8', title: 'Random Act of Kindness (at least 2)', block: 'evening', time: '', icon: '🤝', category: 'Kindness' },
+      { id: 't9', title: 'Call a friend / contact and praise them', block: 'evening', time: '', icon: '📞', category: 'Kindness' },
+      { id: 't10', title: 'Night Supplement', block: 'evening', time: '21:00', icon: '🌙', category: 'Supplements' },
+      { id: 't11', title: 'Walk', block: 'evening', time: '', icon: '🚶‍♀️', category: 'Health' }
+    ];
+
+    // Default Pregnancy Config (LMP: April 10, 2026)
+    let pregnancyConfig = {
+      lmpDate: '2026-04-10'
+    };
+
+    let tasks = [];
+    let completions = {}; // Format: { 'YYYY-MM-DD': { taskId: { completed: true, note: '' } } }
+    let weeklyChartInstance = null;
+    let categoryChartInstance = null;
+
+    window.onload = function() {
+      loadStorageData();
+      document.getElementById('selectedDatePicker').value = selectedDate;
+      updatePregnancyTimeline();
+      renderTasks();
+      initCharts();
+    };
+
+    function loadStorageData() {
+      try {
+        const storedConfig = localStorage.getItem(STORAGE_KEY_CONFIG);
+        if (storedConfig) {
+          pregnancyConfig = JSON.parse(storedConfig);
+        }
+
+        const storedTasks = localStorage.getItem(STORAGE_KEY_TASKS);
+        if (storedTasks && JSON.parse(storedTasks).length > 0) {
+          tasks = JSON.parse(storedTasks);
+        } else {
+          tasks = [...DEFAULT_TASKS];
+          saveTasks();
+        }
+
+        const storedCompletions = localStorage.getItem(STORAGE_KEY_COMPLETIONS);
+        if (storedCompletions) {
+          completions = JSON.parse(storedCompletions);
+        }
+      } catch (e) {
+        console.error("Error loading storage:", e);
+        tasks = [...DEFAULT_TASKS];
+      }
+    }
+
+    function saveTasks() {
+      localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(tasks));
+    }
+
+    function saveCompletions() {
+      localStorage.setItem(STORAGE_KEY_COMPLETIONS, JSON.stringify(completions));
+    }
+
+    function saveConfig() {
+      localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(pregnancyConfig));
+    }
+
+    function updatePregnancyTimeline() {
+      const lmp = new Date(pregnancyConfig.lmpDate);
+      const today = new Date();
+      
+      // Calculate difference in days
+      const diffTime = today.getTime() - lmp.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      const weeks = Math.max(0, Math.floor(diffDays / 7));
+      const days = Math.max(0, diffDays % 7);
+
+      // Estimated Due Date = LMP + 280 days
+      const dueDate = new Date(lmp.getTime() + (280 * 24 * 60 * 60 * 1000));
+      const remainingDays = Math.max(0, Math.floor((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)));
+      const pct = Math.min(100, Math.max(0, Math.round((diffDays / 280) * 100)));
+
+      // UI updates
+      document.getElementById('gestationalAgeText').innerText = `${weeks} Weeks, ${days} Days`;
+      document.getElementById('dueDateText').innerText = dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      document.getElementById('daysRemainingText').innerText = `${remainingDays} Days to go`;
+      document.getElementById('gestationalProgressBar').style.width = `${pct}%`;
+      document.getElementById('progressPercentage').innerText = `${pct}% Completed`;
+      document.getElementById('lmpDisplay').innerText = lmp.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+      // Trimester Determination
+      let trimester = "Trimester 1";
+      if (weeks >= 13 && weeks < 27) trimester = "Trimester 2";
+      else if (weeks >= 27) trimester = "Trimester 3";
+      document.getElementById('trimesterLabel').innerText = `${trimester} • Week ${weeks}`;
+
+      // Baby Size Analogy
+      const sizeAnalogies = [
+        "Poppy Seed 🫘", "Sesame Seed 🌱", "Lentil 🫘", "Blueberry 🫐", "Raspberry 🍓",
+        "Olive 🫒", "Fig 🫐", "Lime 🍋", "Pea Pod 🫛", "Lemon 🍋", "Apple 🍎",
+        "Avocado 🥑", "Turnip 🧅", "Bell Pepper 🫑", "Heirloom Tomato 🍅", "Banana 🍌",
+        "Carrot 🥕", "Spaghetti Squash 🧅", "Mango 🥭", "Ear of Corn 🌽", "Rutabaga 🥔",
+        "Eggplant 🍆", "Butternut Squash 🎃", "Cabbage 🥬", "Cauliflower 🥦", "Cucumber 🥒",
+        "Pineapple 🍍", "Cantaloupe 🍈", "Honeydew Melon 🍈", "Coconut 🥥", "Watermelon 🍉"
+      ];
+      const analogy = sizeAnalogies[Math.min(weeks, sizeAnalogies.length - 1)] || "Watermelon 🍉";
+      document.getElementById('babySizeText').innerText = analogy;
+      document.getElementById('configLmpDate').value = pregnancyConfig.lmpDate;
+    }
+
+    function renderTasks() {
+      const dateCompletions = completions[selectedDate] || {};
+      
+      const morningContainer = document.getElementById('morningTasksList');
+      const afternoonContainer = document.getElementById('afternoonTasksList');
+      const eveningContainer = document.getElementById('eveningTasksList');
+
+      morningContainer.innerHTML = '';
+      afternoonContainer.innerHTML = '';
+      eveningContainer.innerHTML = '';
+
+      let doneCount = 0;
+      let mDone = 0, aDone = 0, eDone = 0;
+      let mTotal = 0, aTotal = 0, eTotal = 0;
+
+      tasks.forEach(task => {
+        const isDone = dateCompletions[task.id]?.completed || false;
+        const taskNote = dateCompletions[task.id]?.note || '';
+
+        if (isDone) doneCount++;
+
+        if (task.block === 'morning') { mTotal++; if (isDone) mDone++; }
+        else if (task.block === 'afternoon') { aTotal++; if (isDone) aDone++; }
+        else if (task.block === 'evening') { eTotal++; if (isDone) eDone++; }
+
+        const card = document.createElement('div');
+        card.className = `task-card p-3.5 rounded-2xl border transition-all flex items-start gap-3 ${
+          isDone ? 'bg-rose-50/60 border-rose-200' : 'bg-white border-slate-100 shadow-sm'
+        }`;
+
+        card.innerHTML = `
+          <button onclick="toggleTask('${task.id}')" class="mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center border transition-all ${
+            isDone ? 'bg-rose-500 border-rose-500 text-white shadow-sm' : 'border-slate-300 hover:border-rose-400 bg-white'
+          }">
+            ${isDone ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
+          </button>
+
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-bold text-sm ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}">
+                ${task.icon || '📌'} ${task.title}
+              </span>
+              ${task.time ? `<span class="text-[11px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md shrink-0"><i class="fa-regular fa-clock mr-1"></i>${formatTime(task.time)}</span>` : ''}
+            </div>
+
+            ${currentRole === 'wife' || taskNote ? `
+              <div class="mt-2 flex items-center gap-2">
+                <input type="text" value="${escapeHtml(taskNote)}" placeholder="Add note or log..." 
+                  onchange="updateTaskNote('${task.id}', this.value)"
+                  class="w-full text-xs bg-transparent border-b border-transparent hover:border-slate-200 focus:border-rose-400 focus:outline-none py-0.5 text-slate-600">
+              </div>
+            ` : ''}
+          </div>
+
+          ${currentRole === 'admin' ? `
+            <button onclick="deleteTask('${task.id}')" class="text-slate-300 hover:text-rose-500 transition px-1">
+              <i class="fa-solid fa-trash-can text-xs"></i>
+            </button>
+          ` : ''}
+        `;
+
+        if (task.block === 'morning') morningContainer.appendChild(card);
+        else if (task.block === 'afternoon') afternoonContainer.appendChild(card);
+        else eveningContainer.appendChild(card);
+      });
+
+      // Update counters
+      document.getElementById('morningCount').innerText = `${mDone}/${mTotal} Done`;
+      document.getElementById('afternoonCount').innerText = `${aDone}/${aTotal} Done`;
+      document.getElementById('eveningCount').innerText = `${eDone}/${eTotal} Done`;
+
+      const pct = tasks.length > 0 ? Math.round((doneCount / tasks.length) * 100) : 0;
+      document.getElementById('dailyProgressText').innerText = `${doneCount} / ${tasks.length} Tasks Done`;
+      document.getElementById('dailyBadgePct').innerText = `${pct}%`;
+    }
+
+    function toggleTask(taskId) {
+      if (!completions[selectedDate]) completions[selectedDate] = {};
+      if (!completions[selectedDate][taskId]) completions[selectedDate][taskId] = { completed: false, note: '' };
+
+      completions[selectedDate][taskId].completed = !completions[selectedDate][taskId].completed;
+      saveCompletions();
+      renderTasks();
+      updateCharts();
+    }
+
+    function updateTaskNote(taskId, note) {
+      if (!completions[selectedDate]) completions[selectedDate] = {};
+      if (!completions[selectedDate][taskId]) completions[selectedDate][taskId] = { completed: false, note: '' };
+
+      completions[selectedDate][taskId].note = note;
+      saveCompletions();
+    }
+
+    function addNewTask(event) {
+      event.preventDefault();
+      const title = document.getElementById('newTaskTitle').value.trim();
+      const block = document.getElementById('newTaskTimeBlock').value;
+      const time = document.getElementById('newTaskTime').value;
+
+      if (!title) return;
+
+      const newTask = {
+        id: 'task_' + Date.now(),
+        title: title,
+        block: block,
+        time: time,
+        icon: '📌',
+        category: 'Custom'
+      };
+
+      tasks.push(newTask);
+      saveTasks();
+      document.getElementById('newTaskTitle').value = '';
+      renderTasks();
+      updateCharts();
+    }
+
+    function deleteTask(taskId) {
+      tasks = tasks.filter(t => t.id !== taskId);
+      saveTasks();
+      renderTasks();
+      updateCharts();
+    }
+
+    function setRole(role) {
+      currentRole = role;
+      const wifeBtn = document.getElementById('btnRoleWife');
+      const adminBtn = document.getElementById('btnRoleAdmin');
+      const adminBlock = document.getElementById('adminControlsBlock');
+
+      if (role === 'wife') {
+        wifeBtn.className = "px-3 py-1.5 rounded-lg transition-all bg-white text-rose-600 shadow-sm font-bold";
+        adminBtn.className = "px-3 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900";
+        adminBlock.classList.add('hidden');
+      } else {
+        adminBtn.className = "px-3 py-1.5 rounded-lg transition-all bg-slate-800 text-white shadow-sm font-bold";
+        wifeBtn.className = "px-3 py-1.5 rounded-lg transition-all text-slate-600 hover:text-slate-900";
+        adminBlock.classList.remove('hidden');
+      }
+      renderTasks();
+    }
+
+    function changeDate(days) {
+      const d = new Date(selectedDate);
+      d.setDate(d.getDate() + days);
+      selectedDate = d.toISOString().split('T')[0];
+      document.getElementById('selectedDatePicker').value = selectedDate;
+      renderTasks();
+    }
+
+    function goToToday() {
+      selectedDate = new Date().toISOString().split('T')[0];
+      document.getElementById('selectedDatePicker').value = selectedDate;
+      renderTasks();
+    }
+
+    function onDateChanged() {
+      selectedDate = document.getElementById('selectedDatePicker').value;
+      renderTasks();
+    }
+
+    function saveConfiguration() {
+      pregnancyConfig.lmpDate = document.getElementById('configLmpDate').value;
+      saveConfig();
+      updatePregnancyTimeline();
+      alert('Pregnancy configuration saved!');
+    }
+
+    function resetDefaultTasks() {
+      if (confirm('Reset to all 11 default daily pregnancy routines?')) {
+        tasks = [...DEFAULT_TASKS];
+        saveTasks();
+        renderTasks();
+        updateCharts();
+      }
+    }
+
+    function switchTab(tab) {
+      document.getElementById('tabDaily').classList.add('hidden');
+      document.getElementById('tabAnalytics').classList.add('hidden');
+      document.getElementById('tabSettings').classList.add('hidden');
+
+      document.getElementById('tabDailyBtn').className = "py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2";
+      document.getElementById('tabAnalyticsBtn').className = "py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2";
+      document.getElementById('tabSettingsBtn').className = "py-2 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2";
+
+      if (tab === 'daily') {
+        document.getElementById('tabDaily').classList.remove('hidden');
+        document.getElementById('tabDailyBtn').className = "py-2 border-b-2 border-rose-500 text-rose-600 font-bold flex items-center gap-2";
+      } else if (tab === 'analytics') {
+        document.getElementById('tabAnalytics').classList.remove('hidden');
+        document.getElementById('tabAnalyticsBtn').className = "py-2 border-b-2 border-rose-500 text-rose-600 font-bold flex items-center gap-2";
+        updateCharts();
+      } else {
+        document.getElementById('tabSettings').classList.remove('hidden');
+        document.getElementById('tabSettingsBtn').className = "py-2 border-b-2 border-rose-500 text-rose-600 font-bold flex items-center gap-2";
+      }
+    }
+
+    function initCharts() {
+      const ctxWeekly = document.getElementById('weeklyChart').getContext('2d');
+      weeklyChartInstance = new Chart(ctxWeekly, {
+        type: 'bar',
+        data: {
+          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          datasets: [{
+            label: 'Completion %',
+            data: [0, 0, 0, 0, 0, 0, 0],
+            backgroundColor: '#f43f5e',
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { min: 0, max: 100 }
+          }
+        }
+      });
+
+      const ctxCategory = document.getElementById('categoryChart').getContext('2d');
+      categoryChartInstance = new Chart(ctxCategory, {
+        type: 'doughnut',
+        data: {
+          labels: ['Health', 'Mind', 'Kindness', 'Supplements', 'Bonding'],
+          datasets: [{
+            data: [3, 3, 2, 2, 1],
+            backgroundColor: ['#f43f5e', '#a855f7', '#3b82f6', '#10b981', '#f59e0b']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+    }
+
+    function updateCharts() {
+      if (!weeklyChartInstance) return;
+      // Generate last 7 days completion data
+      const days = [];
+      const percentages = [];
+      
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' });
+        days.push(dayLabel);
+
+        const dayCompletions = completions[dateStr] || {};
+        let done = 0;
+        tasks.forEach(t => {
+          if (dayCompletions[t.id]?.completed) done++;
+        });
+        const pct = tasks.length > 0 ? Math.round((done / tasks.length) * 100) : 0;
+        percentages.push(pct);
+      }
+
+      weeklyChartInstance.data.labels = days;
+      weeklyChartInstance.data.datasets[0].data = percentages;
+      weeklyChartInstance.update();
+    }
+
+    /* Helper Utility Functions */
+    function formatTime(time24) {
+      if (!time24) return '';
+      const [h, m] = time24.split(':');
+      const hour = parseInt(h, 10);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const hour12 = hour % 12 || 12;
+      return `${hour12}:${m} ${ampm}`;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+  </script>
+</body>
+</html>
