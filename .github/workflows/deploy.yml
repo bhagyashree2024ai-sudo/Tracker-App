@@ -1,0 +1,30 @@
+  - name: Setup Node
+    uses: actions/setup-node@v3
+    with:
+      node-version: '18'
+
+  - name: Authenticate to GCP using service account
+    uses: google-github-actions/auth@v1
+    with:
+      credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+  - name: Prepare firebase client config
+    env:
+      FIREBASE_WEB_CONFIG: ${{ secrets.FIREBASE_WEB_CONFIG }}
+      ADMIN_EMAIL: "krishna.personalinbox@gmail.com"
+    run: |
+      echo "Creating firebase-config.js from FIREBASE_WEB_CONFIG..."
+      printf "window.FIREBASE_CONFIG = %s;\nwindow.BLOOM_ADMIN_EMAIL = '%s';\n" "$FIREBASE_WEB_CONFIG" "$ADMIN_EMAIL" > firebase-config.js
+      node -e "console.log('ProjectId:', JSON.parse(process.env.FIREBASE_WEB_CONFIG).projectId)" > project_id.txt
+      echo "PROJECT_ID=$(cat project_id.txt)" >> $GITHUB_ENV
+
+  - name: Install Firebase CLI
+    run: |
+      npm install -g firebase-tools
+
+  - name: Deploy to Firebase Hosting
+    env:
+      PROJECT_ID: ${{ env.PROJECT_ID }}
+    run: |
+      echo "Deploying to Firebase project: $PROJECT_ID"
+      firebase deploy --only hosting --project $PROJECT_ID --non-interactive
