@@ -1,5 +1,5 @@
   name: Setup Node
-    uses: actions/setup-node@v3
+    uses: actions/setup-node@v4
     with:
       node-version: '18'
 
@@ -8,21 +8,21 @@
     with:
       credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
-    name: Prepare firebase client config
+  name: Prepare firebase client config
     env:
       FIREBASE_WEB_CONFIG: ${{ secrets.FIREBASE_WEB_CONFIG }}
       ADMIN_EMAIL: "krishna.personalinbox@gmail.com"
     run: |
       echo "Creating firebase-config.js from FIREBASE_WEB_CONFIG..."
-      # Save the secret exactly to a file to preserve newlines/quotes
+      # Save secret exactly to a file (preserves newlines/quotes)
       printf "%s" "$FIREBASE_WEB_CONFIG" > /tmp/firebase_web_config.json
-      # Validate the JSON (fails early with helpful message if invalid)
+      # Validate the JSON and fail with a clear message if invalid
       node -e "const fs=require('fs'); try { JSON.parse(fs.readFileSync('/tmp/firebase_web_config.json','utf8')); console.log('FIREBASE_WEB_CONFIG JSON is valid'); } catch(e) { console.error('Invalid FIREBASE_WEB_CONFIG JSON:', e.message); process.exit(1); }"
-      # Build firebase-config.js safely from the validated JSON file
+      # Build firebase-config.js safely from validated file
       echo "window.FIREBASE_CONFIG = " > firebase-config.js
       cat /tmp/firebase_web_config.json >> firebase-config.js
       printf "\nwindow.BLOOM_ADMIN_EMAIL = '%s';\n" "$ADMIN_EMAIL" >> firebase-config.js
-      # Extract PROJECT_ID and export to environment for later steps
+      # Extract PROJECT_ID and export to environment
       node -e "const fs=require('fs'); const s=fs.readFileSync('/tmp/firebase_web_config.json','utf8'); console.log(JSON.parse(s).projectId);" > project_id.txt
       echo "PROJECT_ID=$(cat project_id.txt)" >> $GITHUB_ENV
 
